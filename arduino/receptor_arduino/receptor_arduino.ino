@@ -1,3 +1,6 @@
+#include <avr/wdt.h>
+#include <SoftwareSerial.h>
+
 #define ACELERADOR_DIREITA 5
 #define ACELERADOR_ESQUERDA 6
 
@@ -29,9 +32,26 @@
 volatile int pwmDireita = 0;
 volatile int pwmEsquerda = 0;
 
+// Tempo
+volatile unsigned long millisAnterior = 0;
+
+// Estado do led
+boolean estadoLed = LOW;
+
+// Mensagens de movimento
+volatile char ladoStr[4];
+volatile char veloStr[4];
+
+// Debug por serial
+SoftwareSerial debug(3, 2);
+
+// Ativa o debug por serial
+#define SOFTWARE_DEBUG
+
 void setup() {
   // Configuração da Comunicação Serial
   Serial.begin(9600);
+  debug.begin(9600);
 
   // Configuração dos pinos da Ponte H
   pinMode(DIRECAO_DIREITA_1, OUTPUT);
@@ -39,17 +59,109 @@ void setup() {
   pinMode(DIRECAO_ESQUERDA_1, OUTPUT);
   pinMode(DIRECAO_ESQUERDA_2, OUTPUT);
 
+  // Inicializa os aceleradores
+  pinMode(ACELERADOR_DIREITA, OUTPUT);
+  pinMode(ACELERADOR_ESQUERDA, OUTPUT);
+
+  // Ativa o watchdog em 4S
+  wdt_enable(WDTO_4S);
+
+  // Ativa o LED
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  // Adiciona o \0 padrão
+  ladoStr[3] = '\0';
+  veloStr[3] = '\0';
+
+#ifdef SOFTWARE_DEBUG
+  debug.println("Iniciando receptor...");
+#endif
+
+  // Tenta encontrar o controle
+  while (true) {
+    // Se encontrarmos um * enviamos de volta para o controle o $ e conectamos
+    if (Serial.available() > 0 && Serial.read() == '*') {
+      Serial.write('$');
+      delay(5);
+      Serial.write('$');
+      delay(5);
+      break;
+    }
+
+    // Atualiza o tempo para piscar o led sem delay
+    unsigned long millisAtual = millis();
+
+    // Pisca o led em intervalos de 500 em 500ms
+    if (millisAtual - millisAnterior >= 500) {
+      // Salva o novo tempo
+      millisAnterior = millisAtual;
+
+      // Inverte o estado
+      estadoLed = !estadoLed;
+
+      // Pisca o led
+      digitalWrite(LED_BUILTIN, estadoLed);
+    }
+  }
+
+  // Reseta o watchdog
+  wdt_reset();
+
   // Ativa ir para frente
   IR_PARA_FRENTE();
+
+  // Liga o LED para indicar que está funcionando
+  digitalWrite(LED_BUILTIN, HIGH);
+  
+#ifdef SOFTWARE_DEBUG
+  debug.println("Receptor Inicializado!");
+#endif
 }
 
-#define DEBUG
+//#define DEBUG
+
+// Espera por caractere da serial
+#define esperaCaractereSerial() while (!(Serial.available() > 0))
+
+// Ignora um caracter válido
+#define ignoraCaracterSerial() do{ esperaCaractereSerial(); Serial.read(); } while(false)
+
+// Pega caractere válido da serial e põe em VAR
+#define pegaCaractereSerialPara(VAR) do{ esperaCaractereSerial(); VAR = Serial.read(); } while(false)
 
 void loop() {
-  if(Serial.available()){
-    int lado = Serial.parseInt();
-    Serial.read(); // Ignore ','
-    int velocidade = Serial.parseInt();
+  if (Serial.available() > 0 && Serial.read() == '>') {
+    // Espera 5 millisegundos e lê a mensagem até o \n
+    delay(50);
+
+    // Lê o valor do lado
+    for (int i = 0; i < 3; i++) {
+      pegaCaractereSerialPara(ladoStr[i]);
+    }
+
+    // Ignora a ','
+    ignoraCaracterSerial();
+
+    // Lê a velocidade
+    for (int i = 0; i < 3; i++) {
+      pegaCaractereSerialPara(veloStr[i]);
+    }
+
+    // Ignora o '\n'
+    ignoraCaracterSerial();
+
+    // Reseta o timer para esperar pela próxima mensagem
+    wdt_reset();
+
+    // Envia o código de resposta para o controle
+    Serial.write('#');
+    delay(5);
+    Serial.write('#');
+    delay(5);
+
+    // Converte os inteiros
+    int lado = atoi(ladoStr);
+    int velocidade = atoi(veloStr);
 
 #ifdef DEBUG
     Serial.print("sid ");
@@ -58,25 +170,29 @@ void loop() {
     Serial.println(velocidade);
 #endif
 
-    // Salva as velocidades
-    int velocidadeDireita = 0;
-    int velocidadeEsquerda = 0;
+#ifdef SOFTWARE_DEBUG
+  debug.print(lado);
+  debug.write(',');
+  debug.println(velocidade);
+#endif
 
-    if(lado > 0){
+    // Converte a velocidade para pwm
+    int velocidadePwm = map(velocidade, 0, 100, 0, 255);
+
+    // Salva as velocidades
+    int velocidadeDireita = velocidadePwm;
+    int velocidadeEsquerda = velocidadePwm;
+
+    if (lado > 0) {
       // Gira Direita
-      velocidadeDireita = map(velocidade, 0, 100, 100, 255) - map(abs(lado), 0, 99, 100, 255);
-      velocidadeEsquerda = map(velocidade, 0, 100, 100, 255);
-    } else if(lado < 0) {
+      velocidadeEsquerda -= ((double)velocidade / 100.0) * map(lado, 0, 99, 0, 255);
+    } else if (lado < 0) {
       // Gira Esquerda
-      velocidadeDireita = map(velocidade, 0, 100, 100, 255);
-      velocidadeEsquerda = map(velocidade, 0, 100, 100, 255) - map(abs(lado), 0, 99, 100, 255);
-    } else {
-      // Acelera os dois lados
-      velocidadeDireita = map(velocidade, 0, 100, 100, 255);
-      velocidadeEsquerda = map(velocidade, 0, 100, 100, 255);
+      velocidadeDireita -= ((double)velocidade / 100.0) * map(lado, 0, -99, 0, 255);
     }
 
     // Atualiza as velocidades
+    IR_PARA_FRENTE();
     ACELERA_DIREITA(velocidadeDireita);
     ACELERA_ESQUERDA(velocidadeEsquerda);
   }
