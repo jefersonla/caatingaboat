@@ -102,7 +102,10 @@ function sendCommands() {
         if (err) {
             return console.log('Error on write command : ', err.message);
         }
-        console.log('command written');
+
+        if (ALLOW_DEBUG) {
+            console.log('command written');
+        }
     });
 }
 
