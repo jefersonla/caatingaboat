@@ -36,7 +36,7 @@ volatile int pwmEsquerda = 0;
 volatile unsigned long millisAnterior = 0;
 
 // Estado do led
-boolean estadoLed = LOW;
+boolean estadoLed = HIGH;
 
 // Mensagens de movimento
 volatile char ladoStr[4];
@@ -63,8 +63,8 @@ void setup() {
   pinMode(ACELERADOR_DIREITA, OUTPUT);
   pinMode(ACELERADOR_ESQUERDA, OUTPUT);
 
-  // Ativa o watchdog em 4S
-  wdt_enable(WDTO_4S);
+  // Ativa o watchdog em 1S
+  wdt_enable(WDTO_1S);
 
   // Ativa o LED
   pinMode(LED_BUILTIN, OUTPUT);
@@ -177,7 +177,7 @@ void loop() {
 #endif
 
     // Converte a velocidade para pwm
-    int velocidadePwm = map(velocidade, 0, 100, 0, 255);
+    int velocidadePwm = map(abs(velocidade), 0, 99, 0, 255);
 
     // Salva as velocidades
     int velocidadeDireita = velocidadePwm;
@@ -185,14 +185,20 @@ void loop() {
 
     if (lado > 0) {
       // Gira Direita
-      velocidadeEsquerda -= ((double)velocidade / 100.0) * map(lado, 0, 99, 0, 255);
+      velocidadeEsquerda -= ((double)abs(velocidade) / 99.0) * map(lado, 0, 99, 0, 255);
     } else if (lado < 0) {
       // Gira Esquerda
-      velocidadeDireita -= ((double)velocidade / 100.0) * map(lado, 0, -99, 0, 255);
+      velocidadeDireita -= ((double)abs(velocidade) / 99.0) * map(lado, 0, -99, 0, 255);
     }
 
+    // Define se o movimento do barco é para trás ou para frente
+    if(velocidade > 0){
+      IR_PARA_FRENTE();
+    } else {
+      IR_PARA_TRAS();
+    }
+    
     // Atualiza as velocidades
-    IR_PARA_FRENTE();
     ACELERA_DIREITA(velocidadeDireita);
     ACELERA_ESQUERDA(velocidadeEsquerda);
   }

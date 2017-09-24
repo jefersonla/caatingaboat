@@ -19,6 +19,39 @@ npm install
 ```
 
 Para executar o projeto basta digitar `node index.js` no terminal dentro da pasta.
+### Instalação Galileo
+
+Para a instalação no Intel Galileo são necessário mais passos, visto que a plataforma não vem pronta
+e não gerencia as dependências adequadamente.
+
+```sh
+bash
+opkg update
+opkg install nodejs nodejs-dev nodejs-npm
+opkg install libusb-1.0-0 libusb-1.0-dev
+opkg install linux-libc-headers-dev kernel-dev kernel-modules
+cd /usr/src/kernel
+make scripts
+cd /home/root
+git clone https://github.com/jefersonla/xpad.git
+cd xpad
+make
+make install
+echo "xpad" > /etc/modules-load.d/xpad.conf
+cd /home/root
+git clone https://github.com/jefersonla/caatingaboat.git
+cd caatingaboat
+npm install -g node-gyp node-pre-gyp nan fast-deep-equal
+npm install -g json-schema-traverse json-stable-stringify co safe-buffer ms bindings
+npm install -g forever-initd forever
+npm install --save serialport --build-from-source
+npm rebuild --save serialport --build-from-source
+npm install --save gamepad
+initd-forever index.js
+chmod +x caatingaboat
+cp caatingaboat /etc/init.d/
+update-rc.d caatingaboat defaults
+```
 
 ## Suporte e Desenvolvimento
 

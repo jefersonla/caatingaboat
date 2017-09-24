@@ -2,7 +2,7 @@ var gamepad = require("gamepad");
 var SerialPort = require('serialport');
 
 // Inicia a conexão
-var port = new SerialPort('/dev/ttyUSB0');
+var port = new SerialPort('/dev/ttyUSB0', { baudRate: 57600 });
 
 // Initialize the library
 gamepad.init();
