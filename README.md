@@ -53,6 +53,32 @@ cp caatingaboat /etc/init.d/
 update-rc.d caatingaboat defaults
 ```
 
+### Configuração XBEE
+
+Use o XCTU para configurar o controle e o receptor, modificando os valores como recomendado de acordo com quantos contorles estejam na rede:
+
+#### Configuração Controle
+
+```txt
+CH -- C
+ID -- FACA
+DL -- CAF2
+MY -- CAF1
+CE -- COORDINATOR
+NI -- CONTROLE_BARCO
+```
+
+#### Configuração Receptor
+
+```txt
+CH -- C
+ID -- FACA
+DL -- CAF1
+MY -- CAF2
+CE -- END DEVICE
+NI -- RECEPTOR_BARCO
+```
+
 ## Suporte e Desenvolvimento
 
 Projeto desenvolvido por Jeferson Lima <@jefersonla> jefersonlimaa at dcc dot ufba dot br .

@@ -2,36 +2,19 @@
 #include <Servo.h>
 #include <SoftwareSerial.h>
 
-#define ACELERADOR_DIREITA 5
-#define ACELERADOR_ESQUERDA 6
+#define ACELERADOR_MOTOR 6
 
-//  Definição das entradas para os motores de cada lado, observem que alguns robôs precisaram ter os pinos trocados devido aos módulos de comunicação que utilizam.
-//  Vejam os 4 fios unidos da ponte H que são conectados no Arduino para saberem o padrão do robô que vocês tem em mãos.
-#define DIRECAO_DIREITA_1 7   //4
-#define DIRECAO_DIREITA_2 8   //7
+#define DIRECAO_MOTOR_1 7
+#define DIRECAO_MOTOR_2 8
 
-#define DIRECAO_ESQUERDA_1 9  //8
-#define DIRECAO_ESQUERDA_2 10 //9
+#define IR_PARA_FRENTE() do { digitalWrite(DIRECAO_MOTOR_1, HIGH); digitalWrite(DIRECAO_MOTOR_2, LOW); } while(false)
+#define IR_PARA_TRAS() do { digitalWrite(DIRECAO_MOTOR_1, LOW); digitalWrite(DIRECAO_MOTOR_2, HIGH); } while(false)
 
-#define IR_PARA_FRENTE_DIREITA() do { digitalWrite(DIRECAO_DIREITA_1, HIGH); digitalWrite(DIRECAO_DIREITA_2, LOW); } while(false)
-#define IR_PARA_FRENTE_ESQUERDA() do { digitalWrite(DIRECAO_ESQUERDA_1, HIGH); digitalWrite(DIRECAO_ESQUERDA_2, LOW); } while(false)
-#define IR_PARA_FRENTE() do { IR_PARA_FRENTE_DIREITA(); IR_PARA_FRENTE_ESQUERDA(); } while(false)
-
-#define IR_PARA_TRAS_DIREITA() do { digitalWrite(DIRECAO_DIREITA_1, LOW); digitalWrite(DIRECAO_DIREITA_2, HIGH); } while(false)
-#define IR_PARA_TRAS_ESQUERDA() do { digitalWrite(DIRECAO_ESQUERDA_1, LOW); digitalWrite(DIRECAO_ESQUERDA_2, HIGH); } while(false)
-#define IR_PARA_TRAS() do { IR_PARA_TRAS_DIREITA(); IR_PARA_TRAS_ESQUERDA(); } while(false)
-
-#define ACELERA_DIREITA(VELOCIDADE) do { pwmDireita = VELOCIDADE; analogWrite(ACELERADOR_DIREITA, VELOCIDADE); } while(false)
-#define ACELERA_ESQUERDA(VELOCIDADE) do { pwmEsquerda = VELOCIDADE; analogWrite(ACELERADOR_ESQUERDA, VELOCIDADE); } while(false)
-#define ACELERA(VELOCIDADE) do { ACELERA_DIREITA(VELOCIDADE); ACELERA_ESQUERDA(VELOCIDADE); } while(false)
-
-#define FREIO_DIREITA() { ACELERA_DIREITA(0); digitalWrite(DIRECAO_DIREITA_1, LOW); digitalWrite(DIRECAO_DIREITA_2, LOW); } while(false)
-#define FREIO_ESQUERDA() { ACELERA_ESQUERDA(0); digitalWrite(DIRECAO_ESQUERDA_1, LOW); digitalWrite(DIRECAO_ESQUERDA_2, LOW); } while(false)
-#define FREIO() do { FREIO_DIREITA(); FREIO_ESQUERDA(); } while(false)
+#define ACELERA(VELOCIDADE) do { pwmMotor = VELOCIDADE; analogWrite(ACELERADOR_MOTOR, VELOCIDADE); } while(false)
+#define FREIO() { ACELERA(0); digitalWrite(DIRECAO_MOTOR_1, LOW); digitalWrite(DIRECAO_MOTOR_2, LOW); } while(false)
 
 // Velocidade armazenada PWM
-volatile int pwmDireita = 0;
-volatile int pwmEsquerda = 0;
+volatile int pwmMotor = 0;
 
 // Tempo
 volatile unsigned long millisAnterior = 0;
@@ -58,14 +41,11 @@ void setup() {
   debug.begin(9600);
 
   // Configuração dos pinos da Ponte H
-  pinMode(DIRECAO_DIREITA_1, OUTPUT);
-  pinMode(DIRECAO_DIREITA_2, OUTPUT);
-  pinMode(DIRECAO_ESQUERDA_1, OUTPUT);
-  pinMode(DIRECAO_ESQUERDA_2, OUTPUT);
+  pinMode(DIRECAO_MOTOR_1, OUTPUT);
+  pinMode(DIRECAO_MOTOR_1, OUTPUT);
 
   // Inicializa os aceleradores
-  pinMode(ACELERADOR_DIREITA, OUTPUT);
-  pinMode(ACELERADOR_ESQUERDA, OUTPUT);
+  pinMode(ACELERADOR_MOTOR, OUTPUT);
 
   // Ativa o watchdog em 1S
   wdt_enable(WDTO_1S);
@@ -187,16 +167,13 @@ void loop() {
     // Converte a velocidade para pwm
     int velocidadePwm = map(abs(velocidade), 0, 99, 0, 255);
 
-    // Salva as velocidades
-    int velocidadeDireita = velocidadePwm;
-    int velocidadeEsquerda = velocidadePwm;
-
+    // Move o servomotor
     if (lado > 0) {
       // Gira Direita
-      velocidadeEsquerda -= ((double)abs(velocidade) / 99.0) * map(lado, 0, 99, 0, 255);
+      lemeServo.write(map(lado, 0, 99, 90, 0));
     } else if (lado < 0) {
       // Gira Esquerda
-      velocidadeDireita -= ((double)abs(velocidade) / 99.0) * map(lado, 0, -99, 0, 255);
+      lemeServo.write(map(lado, 0, -99, 180, 90));
     }
 
     // Define se o movimento do barco é para trás ou para frente
@@ -207,7 +184,6 @@ void loop() {
     }
 
     // Atualiza as velocidades
-    ACELERA_DIREITA(velocidadeDireita);
-    ACELERA_ESQUERDA(velocidadeEsquerda);
+    ACELERA(velocidadePwm);
   }
 }
