@@ -112,7 +112,7 @@ void setup() {
 
   // Liga o LED para indicar que está funcionando
   digitalWrite(LED_BUILTIN, HIGH);
-  
+
 #ifdef SOFTWARE_DEBUG
   debug.println("Receptor Inicializado!");
 #endif
@@ -171,9 +171,9 @@ void loop() {
 #endif
 
 #ifdef SOFTWARE_DEBUG
-  debug.print(lado);
-  debug.write(',');
-  debug.println(velocidade);
+    debug.print(lado);
+    debug.write(',');
+    debug.println(velocidade);
 #endif
 
     // Converte a velocidade para pwm
@@ -192,12 +192,12 @@ void loop() {
     }
 
     // Define se o movimento do barco é para trás ou para frente
-    if(velocidade > 0){
+    if (velocidade > 0) {
       IR_PARA_FRENTE();
     } else {
       IR_PARA_TRAS();
     }
-    
+
     // Atualiza as velocidades
     ACELERA_DIREITA(velocidadeDireita);
     ACELERA_ESQUERDA(velocidadeEsquerda);

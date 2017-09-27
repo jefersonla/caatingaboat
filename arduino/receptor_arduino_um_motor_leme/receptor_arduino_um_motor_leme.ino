@@ -1,4 +1,5 @@
 #include <avr/wdt.h>
+#include <Servo.h>
 #include <SoftwareSerial.h>
 
 #define ACELERADOR_DIREITA 5
@@ -42,6 +43,9 @@ boolean estadoLed = HIGH;
 volatile char ladoStr[4];
 volatile char veloStr[4];
 
+// Leme
+Servo lemeServo;
+
 // Debug por serial
 SoftwareSerial debug(3, 2);
 
@@ -76,6 +80,10 @@ void setup() {
 #ifdef SOFTWARE_DEBUG
   debug.println("Iniciando receptor...");
 #endif
+
+  // Configur o leme para a posição inicial
+  lemeServo.attach(11);
+  lemeServo.write(90);
 
   // Tenta encontrar o controle
   while (true) {
@@ -112,7 +120,7 @@ void setup() {
 
   // Liga o LED para indicar que está funcionando
   digitalWrite(LED_BUILTIN, HIGH);
-  
+
 #ifdef SOFTWARE_DEBUG
   debug.println("Receptor Inicializado!");
 #endif
@@ -171,9 +179,9 @@ void loop() {
 #endif
 
 #ifdef SOFTWARE_DEBUG
-  debug.print(lado);
-  debug.write(',');
-  debug.println(velocidade);
+    debug.print(lado);
+    debug.write(',');
+    debug.println(velocidade);
 #endif
 
     // Converte a velocidade para pwm
@@ -192,12 +200,12 @@ void loop() {
     }
 
     // Define se o movimento do barco é para trás ou para frente
-    if(velocidade > 0){
+    if (velocidade > 0) {
       IR_PARA_FRENTE();
     } else {
       IR_PARA_TRAS();
     }
-    
+
     // Atualiza as velocidades
     ACELERA_DIREITA(velocidadeDireita);
     ACELERA_ESQUERDA(velocidadeEsquerda);
